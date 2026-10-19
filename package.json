@@ -1,0 +1,58 @@
+{
+  "name": "dsh-copilot",
+  "description": "DSH 浏览器 + Windows 桌面操控插件（Skill 门控按需激活）：playwright-mcp 接管专用 Edge，windows-mcp 操控桌面，copilot 桥接工具（状态/唤醒/停止/截图/识图）。",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "bridge/server.mjs",
+    "cordis.patch.yml",
+    "scripts/validate.mjs",
+    "CHANGELOG.md"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test:local": "node scripts/validate.mjs --lane local",
+    "test:bridge": "node scripts/validate.mjs --lane bridge",
+    "test:model": "node scripts/validate.mjs --lane model",
+    "validate": "node scripts/validate.mjs --lane release"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@playwright/mcp": "latest",
+    "react": "^18.3.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-mcp-client": "*",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.2.0-rc.1"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "compatibility": {
+      "dsh": "0.1.0-rc.6 (CLI profile) | DSH Desktop 2.0.17 (bundled host 0.2.0-rc.2)",
+      "verified": [
+        "dsh-copilot Skill 注册（skills.register）",
+        "tools/result 观测（mcp-client 工具名 mcp__copilot__*）",
+        "client 半 slot: conversation.input.right（list 型需 options.id）"
+      ],
+      "note": "升级 DSH 后请运行 npm run validate（lane=local 秒级校验 API 假设；bridge 需本机开 Edge）"
+    }
+  }
+}

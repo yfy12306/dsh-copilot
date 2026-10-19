@@ -1,0 +1,11 @@
+# dsh-copilot bundle patch：注入「浏览器 + Windows 桌面操控」插件（host 半 + client 半）。
+# host 半：挂载三个 MCP 工具面（browser=playwright-mcp / desktop=windows-mcp 常驻 / copilot=桥接），
+#          注册 /copilot 命令与 /copilot/* 同源路由，监督 windows-mcp 进程。
+# client 半：输入框右侧状态芯片（浏览器/桌面两个状态点 + 弹层：启动浏览器/截图预览/重启桌面服务）。
+- insert:
+    - id: dsh-copilot
+      name: 'dsh-copilot'
+      config:
+        browserCdpPort: 9222
+        desktopPort: 8765
+        visionModel: deepseek-v4.1-flash-aliyunbailian
