@@ -8,7 +8,7 @@
  *   stop_browser    停止专用浏览器：优先 CDP Browser.close（优雅），失败按进程树回收
  *                   （仅杀命令行含 --user-data-dir=<专用 profile> 的浏览器进程，绝不误杀）
  *   capture         全屏截图：默认仅内存返回（diskless）；落盘模式带滚动清理
- *   vision          识图问答：图片发给轻量视觉模型（默认 deepseek-v4.1-flash @ 你的 LLM 网关）
+ *   vision          识图问答：图片发给轻量视觉模型（默认 deepseek-v4.1-flash @ 视觉网关）
  *
  * 配置全部经 COPILOT_* 环境变量注入（host 插件负责组装；视觉 key 亦可回退读
  * ~/.dsh/.credentials.yaml，与 voice-input 的 test-asr.mjs 同款方式，key 永不打印）。
@@ -186,13 +186,32 @@ function resolveVisionKey() {
   return "";
 }
 
-async function windowsCall(toolName, args, timeoutMs) {
+/** 读 host 写入的运行时端口文件（端口可能因占用漂移，比预期地址可靠）；超过 5 分钟视为过期。 */
+function runtimeWindowsUrl() {
+  try {
+    const file = path.join(HOME, ".dsh", "copilot", "desktop-runtime.json");
+    const j = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (j && typeof j.url === "string" && j.updatedAt) {
+      const age = Date.now() - new Date(j.updatedAt).getTime();
+      if (age >= 0 && age < 5 * 60 * 1000) return j.url;
+    }
+  } catch (e) { /* 不存在/损坏：忽略 */ }
+  return "";
+}
+
+/** 当前桌面服务地址：运行时文件优先 → host 注入的实际地址 → 预期地址。 */
+function currentWindowsUrl() {
+  return runtimeWindowsUrl() || ENV.windowsUrl || ENV.windowsExpectUrl;
+}
+
+async function windowsCall(toolName, args, timeoutMs, urlOverride) {
   const { Client } = req("@modelcontextprotocol/sdk/client/index.js");
   const { StreamableHTTPClientTransport } = req("@modelcontextprotocol/sdk/client/streamableHttp.js");
   const headers = {};
   if (ENV.windowsKey) headers["Authorization"] = "Bearer " + ENV.windowsKey;
-  const transport = new StreamableHTTPClientTransport(new URL(ENV.windowsUrl), { requestInit: { headers } });
-  const client = new Client({ name: "dsh-copilot-bridge", version: "0.2.0" });
+  const target = urlOverride || currentWindowsUrl();
+  const transport = new StreamableHTTPClientTransport(new URL(target), { requestInit: { headers } });
+  const client = new Client({ name: "dsh-copilot-bridge", version: "0.3.0" });
   try {
     await client.connect(transport);
     return await client.callTool({ name: toolName, arguments: args || {} }, undefined, { timeout: timeoutMs || 30000 });
@@ -270,10 +289,11 @@ function errResult(msg) { return { content: [textBlock(msg)], isError: true }; }
 
 async function toolStatus() {
   const cdp = await cdpVersion();
-  const win = { configured: Boolean(ENV.windowsUrl), reachable: false, detail: "" };
-  if (ENV.windowsUrl) {
+  const winUrl = currentWindowsUrl();
+  const win = { configured: Boolean(winUrl), reachable: false, detail: "" };
+  if (winUrl) {
     try {
-      const res = await windowsCall("ControlStatus", {}, 8000);
+      const res = await windowsCall("ControlStatus", {}, 8000, winUrl);
       win.reachable = !res.isError;
       const txt = (res.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join(" ");
       win.detail = txt.slice(0, 300);
@@ -340,15 +360,17 @@ async function toolLaunchBrowser(args) {
 }
 
 async function toolWakeDesktop() {
-  const url = ENV.windowsUrl || ENV.windowsExpectUrl;
-  if (!url) {
+  const initialUrl = currentWindowsUrl();
+  if (!initialUrl) {
     return errResult("桌面面未配置：host 未注入 windows-mcp 地址（检查 desktopEnabled，或 windows-mcp 是否已安装：uv tool install windows-mcp --python 3.14）。");
   }
   const t0 = Date.now();
   let lastErr = "";
   while (Date.now() - t0 < 20000) {
+    // 每轮重读运行时文件：host 挂载成功后端口才最终确定（可能因占用 +1）
+    const url = currentWindowsUrl();
     try {
-      const res = await windowsCall("ControlStatus", {}, 3000);
+      const res = await windowsCall("ControlStatus", {}, 3000, url);
       if (!res.isError) {
         const txt = (res.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join(" ");
         return { content: [textBlock(JSON.stringify({
@@ -393,7 +415,7 @@ async function toolCapture(args) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     file = path.join(ENV.screenshotDir, "copilot-" + stamp + ".png");
   }
-  if (source !== "powershell" && ENV.windowsUrl) {
+  if (source !== "powershell" && currentWindowsUrl()) {
     try {
       const res = await windowsCall("Screenshot", {}, 30000);
       const blocks = (res && res.content) || [];
@@ -552,7 +574,7 @@ const TOOL_DEFS = [
   },
   {
     name: "vision",
-    description: "识图问答：把当前屏幕截图（或指定图片文件）交给轻量视觉模型（默认 deepseek-v4.1-flash @ 你的 LLM 网关）并返回文字答案。比主模型便宜快速，适合「屏幕上是什么/这个值是多少/界面什么状态」类问题。截图默认不落盘。",
+    description: "识图问答：把当前屏幕截图（或指定图片文件）交给轻量视觉模型（默认 deepseek-v4.1-flash @ 视觉网关）并返回文字答案。比主模型便宜快速，适合「屏幕上是什么/这个值是多少/界面什么状态」类问题。截图默认不落盘。",
     inputSchema: {
       type: "object",
       properties: {
@@ -566,7 +588,7 @@ const TOOL_DEFS = [
 ];
 
 const server = new Server(
-  { name: "copilot", version: "0.2.0" },
+  { name: "copilot", version: "0.3.0" },
   { capabilities: { tools: {} }, instructions: INSTRUCTIONS }
 );
 

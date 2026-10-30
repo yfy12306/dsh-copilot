@@ -4,7 +4,7 @@
  * 用法：
  *   node scripts/validate.mjs --lane local     # 秒级：语法 + 模块导出 + 包元数据 + 工具清单静态校验（不联网、不开浏览器）
  *   node scripts/validate.mjs --lane bridge    # 本机端到端：桥接面 8 项断言（会真实打开专用 Edge，跳过识图）
- *   node scripts/validate.mjs --lane model     # 识图实调：LLM 网关 deepseek-v4.1-flash（需要 key 与测试图）
+ *   node scripts/validate.mjs --lane model     # 识图实调：视觉网关 deepseek-v4.1-flash（需要 key 与测试图）
  *   node scripts/validate.mjs --lane release   # local + bridge + model 全跑
  *
  * 退出码 0 = 该 lane 全部通过。
@@ -80,6 +80,7 @@ async function laneLocal() {
     const hostSrc = fs.readFileSync(path.join(pluginDir, "lib/index.js"), "utf8");
     const checks = [
       ["Skill 注册", /skills\.register\(/.test(hostSrc) && /name:\s*"dsh-copilot"/.test(hostSrc)],
+      ["Skill source 已传（加载校验必填，缺则会注册成功但加载失败）", /source:\s*"runtime"/.test(hostSrc)],
       ["tools/result 观测", /ctx\.on\("tools\/result"/.test(hostSrc)],
       ["desktop 门控懒挂载", /mountDesktopFace/.test(hostSrc) && /wakeDesktop/.test(hostSrc)],
       ["孤儿治理含 windows-mcp", /windows-mcp\.toml/.test(hostSrc)]

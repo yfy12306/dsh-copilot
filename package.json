@@ -1,7 +1,7 @@
 {
   "name": "dsh-copilot",
   "description": "DSH 浏览器 + Windows 桌面操控插件（Skill 门控按需激活）：playwright-mcp 接管专用 Edge，windows-mcp 操控桌面，copilot 桥接工具（状态/唤醒/停止/截图/识图）。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

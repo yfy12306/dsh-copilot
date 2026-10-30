@@ -53,7 +53,7 @@
 1. 重启 DSH 后，输入框右侧出现 🖥 芯片（两个状态点：浏览器 CDP / 桌面服务）。
    浏览器未开时 browser 面不挂载（省内存），芯片弹层会显示「懒挂载」状态。
 2. 点芯片 → [🌐 启动专用浏览器]：打开专用 profile 的 Edge（带调试端口 9222），host 自动补挂 playwright-mcp。
-   在该窗口人工登录目标站点（内网站点、公网等），登录态长期保存在 %USERPROFILE%\.dsh\browser-profile。
+   在该窗口人工登录目标站点（公网等），登录态长期保存在 %USERPROFILE%\.dsh\browser-profile。
 3. 对 DSH 说「打开 xx 页面，读取 yy」→ 模型自动走 mcp__browser__* 工具。
 4. 用完浏览器 → 弹层 [⏹ 停止浏览器] 或模型调 mcp__copilot__stop_browser 立即释放内存
    （登录态保留，下次启动无损恢复）；浏览器空闲超过 idleTimeoutMinutes 也会被自动回收，
@@ -113,7 +113,7 @@
 | **desktopIdleReclaimMinutes** | **0** | 桌面面空闲自动卸载阈值（分钟，按无 mcp__desktop__* 调用计）；0 = 激活后常驻（推荐，看桌面要即时响应） |
 | **skillEnabled** | **true** | 注册 `dsh-copilot` Skill（模型可见的能力说明 + 桌面观察规程；加载后自动挂载桌面面） |
 | visionEnabled / visionModel | true / deepseek-v4.1-flash-aliyunbailian | 识图开关与模型 |
-| visionBaseURL / visionApiKeyEnv | https://your-llm-gateway.example.com/v1 / ALIYUNBAILIAN_API_KEY | 网关与凭据名 |
+| visionBaseURL / visionApiKeyEnv | 视觉网关/v1 / ALIYUNBAILIAN_API_KEY | 网关与凭据名 |
 | bridgeEnabled / nodeExe | true / 自动探测 | 桥接面开关与 node 路径 |
 | screenshotDir | ~/.dsh/copilot-screenshots | 截图落盘目录 |
 | **maxScreenshots** | **50** | 截图目录滚动清理：最多保留张数（每次 capture/UI 截图后顺手清） |
@@ -180,7 +180,7 @@
 
     npm run test:local     # 秒级：语法 + 模块导出 + 包元数据 + 工具清单静态校验（不联网、不开浏览器）
     npm run test:bridge    # 本机端到端：桥接面 8 项断言（真实打开专用 Edge，跳过识图）
-    npm run test:model     # 识图实调：LLM 网关 deepseek-v4.1-flash（需要 key 与测试图）
+    npm run test:model     # 识图实调：视觉网关 deepseek-v4.1-flash（需要 key 与测试图）
     npm run validate       # local + bridge + model 全跑（release lane）
 
 等价的原生命令：`node scripts/validate.mjs --lane local|bridge|model|release`；

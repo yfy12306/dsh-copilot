@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.3.1 — 2026-10-19
+
+修复 Skill 门控链路失效（真机实测：`skill(name="dsh-copilot")` 报
+`loaded skill "dsh-copilot" source must be a string`）：
+
+- **根因**：`skills.register()` 的校验（`validateRuntimeSkill`，dsh-skill/lib/index.js:465-469）只查
+  name/description/invocation，**不查 source**；而模型加载走 `skills.get()` → `validateDefinition`
+  （同文件:486）强校验 `source must be a string`。注册时漏传 source → 目录能列出、加载必报错。
+- **修复**：注册参数补 `source: "runtime"`（取内核实常量 `RUNTIME_PROVIDER`，dsh-skill:20）。
+- **加固**：注册后立即 `skills.get()` 自检（与模型加载同一校验路径），失败在启动日志里明确告警
+  （"注册成功 ≠ 加载可用"这类字段漏传不再等到模型调用才暴露）。
+- **回归防护**：`validate.mjs --lane local` 新增静态断言「Skill 注册必须带 source」。
+- 影响面说明：修复前 Skill 永远加载不了 → `tools/result` 的 skill 分支不命中 → 桌面面只能靠
+  wake_desktop / UI 按钮激活；修复后「加载 Skill 自动挂载桌面面」恢复。
+
 ## 0.3.0 — 2026-10-19
 
 能力门控（对齐 dsh-computer-use 的渐进曝光范式，按 Windows/单用户场景适配）：

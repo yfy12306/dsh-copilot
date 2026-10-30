@@ -7,7 +7,7 @@
  *   node scripts/test-bridge.mjs --windows <url> <key>  # 指定常驻 windows-mcp（验证 capture 走 UIA 通道）
  *
  * 流程：initialize → tools/list → status → launch_browser → status(CDP 应在线)
- *       → capture(截图落盘+图像块) → vision(research/vision-test.png 识图，实调视觉模型)
+ *       → capture(截图落盘+图像块) → vision(research/vision-test.png 识图，实调 视觉网关)
  * 退出码 0 = 全部通过。
  */
 import { spawn } from "node:child_process";
@@ -187,7 +187,7 @@ async function main() {
   const cap2Ok = !isErr(cap2) && Boolean(img2 && img2.data && img2.data.length > 1000) && cap2File !== "" && fs.existsSync(cap2File);
   record("capture(落盘+滚动清理)", cap2Ok, "file=" + (cap2File || textOf(cap2).slice(0, 160)));
 
-  // 7) vision（实调视觉模型 deepseek-v4.1-flash；缺省 diskless 截图或指定图）——bridge lane 用 --skip-vision 跳过
+  // 7) vision（实调 视觉网关 deepseek-v4.1-flash；缺省 diskless 截图或指定图）——bridge lane 用 --skip-vision 跳过
   const testPng = "C:\\Users\\user\\Desktop\\deepseek\\research\\vision-test.png";
   if (skipVision) {
     record("vision(跳过)", true, "--skip-vision：识图由 model lane 单独验证");
